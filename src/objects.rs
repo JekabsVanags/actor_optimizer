@@ -50,6 +50,8 @@ impl Schedule {
     pub fn calculate_cost(&mut self) {
         let mut calculated_cost = 0;
 
+        self.reset_actors();
+
         for (scene_index, scene) in self.scenes.iter().enumerate() {
             let day_number = (scene_index + 1) as u32;
 

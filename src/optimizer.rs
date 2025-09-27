@@ -1,51 +1,89 @@
-use crate::objects::{Schedule};
-use rand::Rng;
+use crate::objects::{Schedule, Scene};
+use std::collections::HashMap;
 
-
-pub struct Optimizer{
+pub struct Optimizer {
     schedule: Schedule,
-    best_scene_order: Vec<u32>,
-    best_scene_cost: u32
+    scene_positions: HashMap<u32, usize>
 }
 
-impl Optimizer{
-    pub fn new(schedule: Schedule) -> Self{
-        Self{schedule, best_scene_order: vec![], best_scene_cost: u32::MAX}
+impl Optimizer {
+    pub fn new(schedule: Schedule) -> Self {
+        //Sagatavojam sarakstu kura id ainas ir kurā vietā
+        let mut scene_positions = HashMap::new();
+        for (i, scene) in schedule.scenes.iter().enumerate() {
+            scene_positions.insert(scene.id, i);
+        }
+
+        Self {schedule, scene_positions}
     }
 
-    pub fn generate(&mut self, times: u32){
-        for _ in 0..times{
-            self.schedule.reset_actors();
+    pub fn generate(&mut self, breakpoint: u32) {
+        let len = self.schedule.scenes.len();
+        let mut times_without_improvement = 0;
 
-            let len = self.schedule.scenes.len();
-            let mut rng = rand::thread_rng();
-            let i = rng.gen_range(0..len);
-            let j = rng.gen_range(0..len);
+        let mut previous_best_cost = u32::MAX;
+        let mut local_best_cost = u32::MAX;
+        let mut local_best_order: Vec<u32> = vec![];
 
-            self.schedule.scenes.swap(i, j);
+        
+        loop {
+            println!("SOLIS");
             self.schedule.calculate_cost();
             self.schedule.print_short();
 
-
-            if self.best_scene_cost > self.schedule.cost {
-                self.best_scene_cost = self.schedule.cost;
-                let mut best_order = vec![];
-                for scene in &self.schedule.scenes{
-                    best_order.push(scene.id);
-                }
-                self.best_scene_order = best_order;
+            if self.schedule.cost < local_best_cost {
+                local_best_cost = self.schedule.cost;
+                local_best_order = self.scenes_to_ids();
             }
-        }
+            for i in 1..len {
+                //Samainam vietām blakus esošās ainas
+                self.schedule.scenes.swap(i-1, i);
+                self.schedule.calculate_cost();
+                //self.schedule.print_short();
 
+                if self.schedule.cost < local_best_cost {
+                    local_best_cost = self.schedule.cost;
+                    local_best_order = self.scenes_to_ids();   
+                }
+
+                self.schedule.scenes.swap(i-1, i);
+            }
+            
+            self.ids_to_scenes(&local_best_order);
+            self.schedule.calculate_cost();
+            //Pārbaudam beigu notiekumu
+            if local_best_cost >= previous_best_cost {
+                times_without_improvement += 1;
+                if times_without_improvement >= breakpoint{
+                    break;
+                }
+            } else {
+                times_without_improvement = 0;
+            }
+            previous_best_cost = local_best_cost;
+        }
+        self.schedule.calculate_cost();
         self.print_best();
     }
 
-    pub fn print_best(&self){
+    pub fn print_best(&self) {
         println!("\nLABĀKAIS\n---------------------");
-        print!("CENA: {}, SECĪBA: [", self.best_scene_cost);
-        for scene in &self.best_scene_order{
-            print!("{}, ", scene);
-        }
-        println!("]")
+        self.schedule.print_short()
     }
+
+    fn scenes_to_ids(&self) -> Vec<u32> {
+        self.schedule.scenes.iter().map(|s| s.id).collect()
+    }
+
+    //Sakārtojam ainas pēc id saraksta
+    fn ids_to_scenes(&mut self, target_order: &[u32]) {
+        for (new_index, &scene_id) in target_order.iter().enumerate() {
+        let current_index = self.scene_positions[&scene_id]; 
+        self.schedule.scenes.swap(new_index, current_index);
+        // Atjaunojam karšu informāciju par jaunajām pozīcijām
+        self.scene_positions.insert(self.schedule.scenes[current_index].id, current_index);
+        self.scene_positions.insert(self.schedule.scenes[new_index].id, new_index);
+        }
+    }
+
 }
