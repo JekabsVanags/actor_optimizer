@@ -1,63 +1,99 @@
+use std::collections::HashMap;
+
 pub struct Actor {
     pub id: u32,
     pub name: String,
-    pub vage: u32,
-    pub days_on_set: u32
+    pub wage: u32,
+    //Palīgvērtības ātrākām kalkulācijām
+    pub first_day: u32,
+    pub last_day: u32
 }
 
 impl Actor {
-    pub fn new(id: u32, name: String, vage: u32) -> Self {
-        Self { id, name, vage, days_on_set: 0 }
-    }
-
-    pub fn add_days_on_set(&mut self, days_added: u32) {
-        self.days_on_set += days_added;
+    pub fn new(id: u32, name: String, wage: u32) -> Self {
+        Self { id, name, wage, first_day: 0, last_day: 0 }
     }
 }
 
+#[derive(Clone)]
 pub struct Scene {
     pub id: u32,
     pub title: String,
-    pub actors: Vec<Actor>,
+    pub actor_ids: Vec<u32>,
 }
 
 impl Scene {
-    pub fn new(id: u32, title: String, actors: Vec<Actor>) -> Self {
-        Self { id, title, actors }
+    pub fn new(id: u32, title: String, actor_ids: Vec<u32>) -> Self {
+        Self { id, title, actor_ids }
     }
 }
 
 pub struct Schedule {
     pub scenes: Vec<Scene>,
+    pub actors: HashMap<u32, Actor>,
     pub cost: u32
 }
 
 impl Schedule {
-    pub fn new(scenes: Vec<Scene>)-> Self {
-        let mut schedule = Self {scenes, cost: 0};
-        schedule.calculate_cost();
-        schedule
+    pub fn new(scenes: Vec<Scene>, actors: Vec<Actor>) -> Self {
+        let actors_map: HashMap<u32, Actor> = actors.into_iter().map(|a| (a.id, a)).collect();
+        Self { scenes, actors: actors_map, cost: 0 }
     }
 
-    pub fn print(&self){
+    pub fn reset_actors(&mut self) {
+        for actor in self.actors.values_mut() {
+            actor.first_day = 0;
+            actor.last_day = 0;
+        }
+    }
+
+    pub fn calculate_cost(&mut self) {
+        let mut calculated_cost = 0;
+
+        for (scene_index, scene) in self.scenes.iter().enumerate() {
+            let day_number = (scene_index + 1) as u32;
+
+            for actor_id in &scene.actor_ids {
+                if let Some(actor) = self.actors.get_mut(actor_id) {
+                    if actor.first_day == 0 {
+                        actor.first_day = day_number;
+                        actor.last_day = day_number;
+                        calculated_cost += actor.wage;
+                    } else if actor.last_day < day_number {
+                        let days_on_set = day_number - actor.last_day;
+                        calculated_cost += actor.wage * days_on_set;
+                        actor.last_day = day_number;
+                    }
+                }
+            }
+        }
+
+        self.cost = calculated_cost;
+    }
+
+    pub fn print(&self) {
         println!("IZMAKSAS: {}", self.cost);
         println!("GRAFIKS:");
-        for scene in &self.scenes{
+
+        for scene in &self.scenes {
             print!("{}, actors: ", scene.title);
-            for actor in &scene.actors{
-                print!("{}, ", actor.name)
+            for actor_id in &scene.actor_ids {
+                if let Some(actor) = self.actors.get(actor_id) {
+                    print!("{}, ", actor.name);
+                } else {
+                    print!("Unknown actor (ID {}), ", actor_id);
+                }
             }
-            println!("");
+            println!();
         }
+        println!("--------------------")
     }
 
-    fn calculate_cost(&mut self){
-        let mut calculated_cost = 0;
+    pub fn print_short(&self){
+        print!("IZMAKSAS: {}, SECĪBA: [", self.cost);
         for scene in &self.scenes {
-            for actor in &scene.actors {
-                calculated_cost += actor.vage;
-            }
+            print!("{}, ", scene.id);
         }
-        self.cost = calculated_cost;
+        println!("]")
     }
 }
