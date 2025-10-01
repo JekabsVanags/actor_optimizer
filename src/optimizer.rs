@@ -1,5 +1,7 @@
 use crate::objects::{Schedule, Scene};
 use std::collections::HashMap;
+use std::collections::VecDeque;
+use rand::Rng;
 
 pub struct Optimizer {
     schedule: Schedule,
@@ -17,7 +19,7 @@ impl Optimizer {
         Self {schedule, scene_positions}
     }
 
-    pub fn generate(&mut self, breakpoint: u32) {
+    pub fn local_optimization(&mut self, breakpoint: u32) -> u32 {
         let len = self.schedule.scenes.len();
         let mut times_without_improvement = 0;
 
@@ -39,8 +41,7 @@ impl Optimizer {
                 //Samainam vietām blakus esošās ainas
                 self.schedule.scenes.swap(i-1, i);
                 self.schedule.calculate_cost();
-                //self.schedule.print_short();
-
+                
                 if self.schedule.cost < local_best_cost {
                     local_best_cost = self.schedule.cost;
                     local_best_order = self.scenes_to_ids();   
@@ -64,11 +65,90 @@ impl Optimizer {
         }
         self.schedule.calculate_cost();
         self.print_best();
+        self.schedule.cost
     }
+
+    pub fn late_acceptance_hillclimbing(&mut self, memory_length: usize, findable_optimum_count: u32, termination_count: u32) -> u32 {
+        let mut rng = rand::thread_rng();
+        let len = self.schedule.scenes.len();
+
+        //Turam labākās vērtības
+        let mut best_cost = self.schedule.calculate_cost();
+        let mut best_order = self.scenes_to_ids();
+        let mut times_best_found = 0;
+        let mut times_ran = 0;
+
+
+        //Saglabājam vēsturi
+        let mut previous_que = VecDeque::new();
+        previous_que.push_back(best_cost);
+
+        //Iterējam variantus
+        loop {
+            times_ran += 1;
+            let last_cost = *previous_que.back().unwrap();
+            let oldest_cost = *previous_que.front().unwrap();
+
+            //Samainam 2 random elementus
+            let pos1 = rng.gen_range(0..len);
+            let mut pos2 = rng.gen_range(0..len);
+            self.swap_items(pos1, pos2);
+
+            //Aprēķinam izmaksu variantam
+            let current_cost = self.schedule.calculate_cost();
+            
+            //Ja ir dārgāks par vecāko un iepriekšējo, atgriežam iepriekšējā vērtībā
+            if current_cost > oldest_cost && current_cost > last_cost {
+                self.swap_items(pos1,pos2);
+                self.schedule.calculate_cost();
+            }
+
+            //self.schedule.print_short();
+
+            //Saglabājam labākos variantus, lai ja variants ar tādu pašu vērtību atrasts X reizes, varam atgriezties
+            if current_cost == best_cost {
+                times_best_found += 1;
+                best_order = self.scenes_to_ids();
+                print!(" + {}", times_best_found);
+            } else if current_cost < best_cost {
+                print!("\nNEWBESTFOUND {}", current_cost);
+                times_best_found = 0;
+                best_cost = current_cost;
+                best_order = self.scenes_to_ids();
+            }
+
+            //Atjaunojam atmiņu
+            if previous_que.len() >= memory_length {
+                previous_que.pop_front();
+            }
+            previous_que.push_back(current_cost);
+
+            // Atgriežamies
+            if times_best_found >= findable_optimum_count || times_ran > termination_count{
+                break;
+            }
+        }
+
+        //Atjaunojam labāko, printējam
+
+        if times_ran > termination_count{
+            println!("\nPĀRTRAUKTS TIMEOUT DĒĻ")
+        }
+        self.ids_to_scenes(&best_order);
+        self.schedule.calculate_cost();
+        self.print_best();
+        self.schedule.cost
+    }
+
 
     pub fn print_best(&self) {
         println!("\nLABĀKAIS\n---------------------");
         self.schedule.print_short()
+    }
+
+    pub fn print_best_full(&self) {
+        println!("\nLABĀKAIS\n---------------------");
+        self.schedule.print()
     }
 
     fn scenes_to_ids(&self) -> Vec<u32> {
@@ -84,6 +164,12 @@ impl Optimizer {
         self.scene_positions.insert(self.schedule.scenes[current_index].id, current_index);
         self.scene_positions.insert(self.schedule.scenes[new_index].id, new_index);
         }
+    }
+
+    fn swap_items(&mut self, pos1: usize, pos2: usize){
+        self.schedule.scenes.swap(pos1, pos2);
+        self.scene_positions.insert(self.schedule.scenes[pos1].id, pos1);
+        self.scene_positions.insert(self.schedule.scenes[pos2].id, pos2);
     }
 
 }

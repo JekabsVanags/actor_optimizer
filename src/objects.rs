@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+
+#[derive(Clone)]
 pub struct Actor {
     pub id: u32,
     pub name: String,
@@ -15,6 +17,7 @@ impl Actor {
     }
 }
 
+
 #[derive(Clone)]
 pub struct Scene {
     pub id: u32,
@@ -28,6 +31,8 @@ impl Scene {
     }
 }
 
+
+#[derive(Clone)]
 pub struct Schedule {
     pub scenes: Vec<Scene>,
     pub actors: HashMap<u32, Actor>,
@@ -47,7 +52,7 @@ impl Schedule {
         }
     }
 
-    pub fn calculate_cost(&mut self) {
+    pub fn calculate_cost(&mut self) -> u32 {
         let mut calculated_cost = 0;
 
         self.reset_actors();
@@ -71,6 +76,7 @@ impl Schedule {
         }
 
         self.cost = calculated_cost;
+        calculated_cost
     }
 
     pub fn print(&self) {

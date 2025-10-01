@@ -1,6 +1,26 @@
 use crate::objects::{Actor, Scene, Schedule};
 use rand::Rng;
 
+pub fn hardcoded_simple_schedule() -> Schedule{
+  let mut actors = vec![];
+  actors.push(Actor::new(1, "Alice".to_string(), 10));
+  actors.push(Actor::new(2, "Bob".to_string(), 20));
+  actors.push(Actor::new(3, "Jack".to_string(), 100));
+  actors.push(Actor::new(4, "Ann".to_string(), 20));
+  actors.push(Actor::new(5, "Josh".to_string(), 10));
+  
+
+  // Create scenes
+  let scene1 = Scene::new(1, "Opening Scene".to_string(), vec![1,2,3]);
+  let scene2 = Scene::new(2, "Scene 2".to_string(), vec![2, 5]);
+  let scene3 = Scene::new(3, "Scene 3".to_string(), vec![1, 5]);
+  let scene4 = Scene::new(4, "Closing Scene".to_string(), vec![3,4]);
+
+  Schedule::new(vec![scene1, scene2, scene3, scene4], actors)
+  //LABĀKĀS IZMAKSAS 100 * 2 + 20 * 1 + 20 * 2 + 10 * 3 + 10 * 2 = 310
+  //SECIBA 4, 1, 2, 3 
+}
+
 pub fn hardcoded1_schedule() -> Schedule{
   // Create some actors
   let mut actors = vec![];
