@@ -19,7 +19,7 @@ impl Optimizer {
         Self {schedule, scene_positions}
     }
 
-    pub fn local_optimization(&mut self, breakpoint: u32) -> u32 {
+    pub fn local_optimization(&mut self, breakpoint: u32, verbose: bool) -> u32 {
         let len = self.schedule.scenes.len();
         let mut times_without_improvement = 0;
 
@@ -29,9 +29,11 @@ impl Optimizer {
 
         
         loop {
-            println!("SOLIS");
             self.schedule.calculate_cost();
-            self.schedule.print_short();
+            if verbose{ 
+                println!("SOLIS");
+                self.schedule.print_short();
+            };
 
             if self.schedule.cost < local_best_cost {
                 local_best_cost = self.schedule.cost;
@@ -68,7 +70,7 @@ impl Optimizer {
         self.schedule.cost
     }
 
-    pub fn late_acceptance_hillclimbing(&mut self, memory_length: usize, findable_optimum_count: u32, termination_count: u32) -> u32 {
+    pub fn late_acceptance_hillclimbing(&mut self, memory_length: usize, findable_optimum_count: u32, max_cycles: u32, verbose: bool) -> u32 {
         let mut rng = rand::thread_rng();
         let len = self.schedule.scenes.len();
 
@@ -92,6 +94,9 @@ impl Optimizer {
             //Samainam 2 random elementus
             let pos1 = rng.gen_range(0..len);
             let mut pos2 = rng.gen_range(0..len);
+            while pos1 == pos2 {
+                pos2 = rng.gen_range(0..len);
+            }
             self.swap_items(pos1, pos2);
 
             //Aprēķinam izmaksu variantam
@@ -103,15 +108,13 @@ impl Optimizer {
                 self.schedule.calculate_cost();
             }
 
-            //self.schedule.print_short();
-
             //Saglabājam labākos variantus, lai ja variants ar tādu pašu vērtību atrasts X reizes, varam atgriezties
             if current_cost == best_cost {
                 times_best_found += 1;
                 best_order = self.scenes_to_ids();
-                print!(" + {}", times_best_found);
+                if verbose {print!(" + {}", times_best_found)};
             } else if current_cost < best_cost {
-                print!("\nNEWBESTFOUND {}", current_cost);
+                if verbose {print!("\nNEWBESTFOUND {}", current_cost)};
                 times_best_found = 0;
                 best_cost = current_cost;
                 best_order = self.scenes_to_ids();
@@ -124,15 +127,15 @@ impl Optimizer {
             previous_que.push_back(current_cost);
 
             // Atgriežamies
-            if times_best_found >= findable_optimum_count || times_ran > termination_count{
+            if times_best_found >= findable_optimum_count || times_ran > max_cycles{
                 break;
             }
         }
 
         //Atjaunojam labāko, printējam
 
-        if times_ran > termination_count{
-            println!("\nPĀRTRAUKTS TIMEOUT DĒĻ")
+        if times_ran > max_cycles{
+            if verbose{ println!("\nPĀRTRAUKTS TIMEOUT DĒĻ")};
         }
         self.ids_to_scenes(&best_order);
         self.schedule.calculate_cost();
