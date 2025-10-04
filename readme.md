@@ -62,7 +62,7 @@ LOKĀLAIS: 700 cost, 3.116485ms time; HILLCLIMBGING: 620 cost, 18.293973ms time;
 ```
 
 Testējot ar randomizēto sarakstu, vais nestrādā x reizes sasniegts viens un tas pats minimums, un programma apstājas ar timeout. Dažreiz hillclimbing iegūst labākus rezultātus kā lokālais optimums, bet ar ievērojami lielāku laika izmaksu. Atmiņas izmēra parametrs ievērojami ietekmē rezultātus, to vajag kalibrēt lai dabutu labākos (lielāks atmiņas garums maziem datiem dod siltākus rezultatus). Kopumā kamēr uzdevums ir salīdzinoši viegls, lokālā meklēšana ir optimālāka.
-``
+```
 LOKĀLAIS: 66747 cost, 882.438787ms time; HILLCLIMBGING: 63330 cost, 61.26545902s time; (atmiņas garums 3, 50 ainas)
 LOKĀLAIS: 70294 cost, 825.791223ms time; HILLCLIMBGING: 70351 cost, 55.277612015s time; (atmiņas garums 3, 50 ainas)
 LOKĀLAIS: 83482 cost, 716.803883ms time; HILLCLIMBGING: 83254 cost, 57.600839732s time; (atmiņas garums 10, 50 ainas)
